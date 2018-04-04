@@ -1,14 +1,7 @@
 import parse from '../src/parser';
 import typing, { Type } from '../src/typer';
 
-describe('typings of CSS syntax', () => {
-  it('types combinators', () => {
-    expect(typing(parse('something another-thing'))).toHaveLength(1);
-    expect(typing(parse('something && another-thing'))).toHaveLength(1);
-    expect(typing(parse('something | another-thing'))).toHaveLength(2);
-    expect(typing(parse('something || another-thing'))).toHaveLength(3);
-  });
-
+describe('typing', () => {
   it('types components', () => {
     expect(typing(parse('something | 100 | <color>'))).toMatchObject([
       { type: Type.StringLiteral },
@@ -25,53 +18,61 @@ describe('typings of CSS syntax', () => {
     ]);
   });
 
+  it('types combinators', () => {
+    expect(typing(parse('something | another-thing'))).toHaveLength(2);
+    expect(typing(parse('something || another-thing'))).toHaveLength(4);
+    expect(typing(parse('something && another-thing'))).toHaveLength(2);
+    expect(typing(parse('something another-thing'))).toHaveLength(1);
+  });
+
   it('types optional components', () => {
-    expect(typing(parse('something another-thing? | 100'))).toMatchObject([
-      { type: Type.StringLiteral },
-      { type: Type.String },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something another-thing?'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something' },
+      { type: Type.StringLiteral, literal: 'something another-thing' },
     ]);
-    expect(typing(parse('something another-thing? yet-another-thing? | 100'))).toMatchObject([
-      { type: Type.StringLiteral },
-      { type: Type.String },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something another-thing? yet-another-thing?'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something another-thing' },
+      { type: Type.StringLiteral, literal: 'something yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something' },
     ]);
-    expect(typing(parse('something? another-thing yet-another-thing? | 100'))).toMatchObject([
-      { type: Type.String },
-      { type: Type.StringLiteral },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something? another-thing yet-another-thing?'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something another-thing' },
+      { type: Type.StringLiteral, literal: 'another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'another-thing' },
     ]);
-    expect(typing(parse('something? another-thing? yet-another-thing | 100'))).toMatchObject([
-      { type: Type.String },
-      { type: Type.StringLiteral },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something? another-thing? yet-another-thing'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'yet-another-thing' },
     ]);
-    expect(typing(parse('something? another-thing? yet-another-thing? | 100'))).toMatchObject([
-      { type: Type.StringLiteral },
-      { type: Type.String },
-      { type: Type.StringLiteral },
-      { type: Type.StringLiteral },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something? another-thing? yet-another-thing?'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something another-thing' },
+      { type: Type.StringLiteral, literal: 'something yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something' },
+      { type: Type.StringLiteral, literal: 'another-thing' },
+      { type: Type.StringLiteral, literal: 'yet-another-thing' },
     ]);
-    expect(typing(parse('something another-thing yet-another-thing? | 100'))).toMatchObject([
-      { type: Type.String },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something another-thing yet-another-thing?'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something another-thing' },
     ]);
-    expect(typing(parse('something another-thing? yet-another-thing | 100'))).toMatchObject([
-      { type: Type.String },
-      { type: Type.NumericLiteral },
-    ]);
-    expect(typing(parse('something? another-thing yet-another-thing | 100'))).toMatchObject([
-      { type: Type.String },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something another-thing? yet-another-thing'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something yet-another-thing' },
     ]);
   });
 
   it('types optional group components', () => {
-    expect(typing(parse('[ something ] [ another-thing ]? | 100'))).toMatchObject([
-      { type: Type.StringLiteral },
-      { type: Type.String },
-      { type: Type.NumericLiteral },
+    expect(typing(parse('something [ another-thing | yet-another-thing ]?'))).toMatchObject([
+      { type: Type.StringLiteral, literal: 'something another-thing' },
+      { type: Type.StringLiteral, literal: 'something yet-another-thing' },
+      { type: Type.StringLiteral, literal: 'something' },
     ]);
   });
 });
