@@ -1,8 +1,8 @@
+import * as properties from 'mdn-data/css/properties.json';
 import * as syntaxes from 'mdn-data/css/syntaxes.json';
+import { compatSyntax } from './compat';
 import parse from './parser';
 import typing, { addType, DataType, hasType, ResolvedType, Type, TypeType } from './typer';
-
-const MIN_TYPES = 3;
 
 const dataTypes: { [key: string]: ResolvedType[] } = {};
 
@@ -10,7 +10,8 @@ export default dataTypes;
 
 export function resolveDataTypes(
   types: TypeType[],
-  resolver: (name: string) => ResolvedType[] = dataTypeResolver,
+  resolver: (name: string) => ResolvedType[] = simpleDataTypeResolver,
+  min = 3,
 ): ResolvedType[] {
   let resolvedDataTypes: ResolvedType[] = [];
 
@@ -19,7 +20,7 @@ export function resolveDataTypes(
       case Type.DataType: {
         const resolvedDataType = resolver(type.name);
 
-        if (resolvedDataType.length >= MIN_TYPES) {
+        if (resolvedDataType.length >= min) {
           // Dissolve data type if it's too small
           resolvedDataTypes = addType(resolvedDataTypes, addDataType(type.name, resolvedDataType));
         } else {
@@ -46,10 +47,24 @@ export function resolveDataTypes(
   return resolvedDataTypes;
 }
 
-function dataTypeResolver(name: string): ResolvedType[] {
+function simpleDataTypeResolver(name: string): ResolvedType[] {
   return name in syntaxes
-    ? resolveDataTypes(typing(parse(syntaxes[name].syntax)), dataTypeResolver)
+    ? resolveDataTypes(typing(parse(syntaxes[name].syntax)), simpleDataTypeResolver)
     : [{ type: Type.String }];
+}
+
+export function createPropertyDataTypeResolver(data: MDN.CompatData | null, min?: number) {
+  const resolver: (dataTypeName: string) => ResolvedType[] = dataTypeName => {
+    const syntax = syntaxes[dataTypeName] || properties[dataTypeName];
+    return syntax
+      ? resolveDataTypes(
+          data ? typing(compatSyntax(data, parse(syntax.syntax))) : typing(parse(syntax.syntax)),
+          resolver,
+        )
+      : [{ type: Type.String }];
+  };
+
+  return resolver;
 }
 
 function addDataType(name: string, types: ResolvedType[], index = 0): DataType {

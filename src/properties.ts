@@ -1,5 +1,4 @@
 import * as properties from 'mdn-data/css/properties.json';
-import * as syntaxes from 'mdn-data/css/syntaxes.json';
 import {
   compatNames,
   compatSyntax,
@@ -9,10 +8,11 @@ import {
   isAddedBySome,
   isDeprecated,
 } from './compat';
-import { resolveDataTypes } from './data-types';
+import { createPropertyDataTypeResolver, resolveDataTypes } from './data-types';
 import { properties as rawSvgProperties, syntaxes as svgSyntaxes } from './data/svg';
 import parse from './parser';
-import typing, { ResolvedType, Type } from './typer';
+import patchProperty from './patcher';
+import typing, { ResolvedType } from './typer';
 
 const IGNORES = [
   // Custom properties
@@ -85,7 +85,10 @@ for (const originalName in properties) {
 
   const property: IProperty = {
     name: originalName,
-    types: resolveDataTypes(typing(entities), createDataTypeResolver(compatibilityData)),
+    types: patchProperty(
+      originalName,
+      resolveDataTypes(typing(entities), createPropertyDataTypeResolver(compatibilityData)),
+    ),
   };
 
   for (const name of currentNames) {
@@ -131,22 +134,8 @@ function filterMissingProperties(names: string[]) {
   return names.filter(name => !(name in properties));
 }
 
-export function createDataTypeResolver(data: MDN.CompatData | null) {
-  const resolver: (dataTypeName: string) => ResolvedType[] = dataTypeName => {
-    const syntax = syntaxes[dataTypeName] || properties[dataTypeName];
-    return syntax
-      ? resolveDataTypes(
-          data ? typing(compatSyntax(data, parse(syntax.syntax))) : typing(parse(syntax.syntax)),
-          resolver,
-        )
-      : [{ type: Type.String }];
-  };
-
-  return resolver;
-}
-
 function createSvgDataTypeResolver(data: MDN.CompatData | null) {
-  const resolver = createDataTypeResolver(data);
+  const resolver = createPropertyDataTypeResolver(data);
   const svgResolver: (dataTypeName: string) => ResolvedType[] = (dataTypeName: string) =>
     dataTypeName in svgSyntaxes
       ? resolveDataTypes(typing(parse(svgSyntaxes[dataTypeName].syntax)), svgResolver)
